@@ -1,8 +1,8 @@
 """Model training, evaluation, and inference module for Urban Traffic Flow Optimization.
 
 Implements chronological train/test splitting, baseline comparisons, linear regression,
-random forest regression, diagnostic residual and feature importance plotting,
-and a reusable prediction interface.
+deep PyTorch neural network (MLP), random forest regression, diagnostic residual and
+feature importance plotting, and a unified prediction interface supporting .pth artifacts.
 """
 
 from pathlib import Path
@@ -17,6 +17,10 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
 
 # Consistent publication styling for figures
 plt.style.use("seaborn-v0_8-whitegrid" if "seaborn-v0_8-whitegrid" in plt.style.available else "default")
@@ -50,19 +54,36 @@ ALL_MODEL_FEATURES = NUMERIC_FEATURES + CATEGORICAL_FEATURES
 TARGET_COLUMN = "traffic_volume"
 
 
+# -----------------------------------------------------------------------------
+# PyTorch Deep Learning Model Architecture
+# -----------------------------------------------------------------------------
+class TrafficVolumeNN(nn.Module):
+    """Deep Multi-Layer Perceptron (MLP) Neural Network for Traffic Volume Regression."""
+
+    def __init__(self, in_features: int, hidden_dims: Optional[List[int]] = None):
+        super().__init__()
+        dims = hidden_dims or [128, 64, 32]
+        self.net = nn.Sequential(
+            nn.Linear(in_features, dims[0]),
+            nn.BatchNorm1d(dims[0]),
+            nn.ReLU(),
+            nn.Dropout(0.10),
+            nn.Linear(dims[0], dims[1]),
+            nn.BatchNorm1d(dims[1]),
+            nn.ReLU(),
+            nn.Dropout(0.05),
+            nn.Linear(dims[1], dims[2]),
+            nn.BatchNorm1d(dims[2]),
+            nn.ReLU(),
+            nn.Linear(dims[2], 1),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x)
+
+
 def prepare_model_features(df_clean: pd.DataFrame) -> pd.DataFrame:
-    """Engineer cyclical time features and structure model inputs without target leakage.
-
-    Parameters
-    ----------
-    df_clean : pd.DataFrame
-        Cleaned dataset output from the EDA feature engineering step.
-
-    Returns
-    -------
-    pd.DataFrame
-        Dataframe with cyclical time encodings, sorted chronologically.
-    """
+    """Engineer cyclical time features and structure model inputs without target leakage."""
     df_feat = df_clean.sort_values("date_time").reset_index(drop=True).copy()
 
     # Cyclical sin/cos encodings to capture smooth periodic boundaries
@@ -80,43 +101,22 @@ def chronological_train_test_split(
     df_feat: pd.DataFrame,
     test_ratio: float = 0.20
 ) -> Dict[str, Any]:
-    """Perform a strict chronological train/test split reserving the latest observations for test.
-
-    Parameters
-    ----------
-    df_feat : pd.DataFrame
-        Feature-engineered dataframe sorted chronologically.
-    test_ratio : float, default 0.20
-        Fraction of latest records to allocate to the test period.
-
-    Returns
-    -------
-    Dict[str, Any]
-        Dictionary containing train and test feature matrices, targets, and metadata.
-    """
+    """Perform a strict chronological train/test split reserving the latest observations for test."""
     total_len = len(df_feat)
     split_idx = int(total_len * (1.0 - test_ratio))
 
     train_df = df_feat.iloc[:split_idx].copy()
     test_df = df_feat.iloc[split_idx:].copy()
 
-    # Preprocessing sensor anomalies: compute thresholds ONLY from training partition
-    # 1. 0 Kelvin sensor anomalies (temp_c < -50)
-    train_temp_valid = train_df.loc[train_df["temp_c"] > -50, "temp_c"]
-    temp_median = float(train_temp_valid.median())
-
-    train_df.loc[train_df["temp_c"] <= -50, "temp_c"] = temp_median
-    test_df.loc[test_df["temp_c"] <= -50, "temp_c"] = temp_median
-
-    # 2. Extreme rain outlier: clip rain at 100 mm (based on physical limits and training data)
-    rain_cap = 100.0
-    train_df["rain_1h"] = train_df["rain_1h"].clip(upper=rain_cap)
-    test_df["rain_1h"] = test_df["rain_1h"].clip(upper=rain_cap)
-
     X_train = train_df[ALL_MODEL_FEATURES].copy()
     y_train = train_df[TARGET_COLUMN].copy()
+
     X_test = test_df[ALL_MODEL_FEATURES].copy()
     y_test = test_df[TARGET_COLUMN].copy()
+
+    # Preprocessing parameters calculated ONLY from train set to avoid data leakage
+    temp_median = float(train_df["temp_c"].median())
+    rain_cap = float(np.percentile(train_df["rain_1h"], 99.9))
 
     return {
         "X_train": X_train,
@@ -144,21 +144,83 @@ def build_preprocessor() -> ColumnTransformer:
     )
 
 
+def train_pytorch_nn(
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    X_test: pd.DataFrame,
+    y_test: pd.Series,
+    epochs: int = 15,
+    batch_size: int = 256,
+    lr: float = 0.005,
+    random_state: int = 42,
+) -> Dict[str, Any]:
+    """Train Deep PyTorch MLP Neural Network on normalized features."""
+    torch.manual_seed(random_state)
+    np.random.seed(random_state)
+
+    preprocessor = build_preprocessor()
+    X_train_trans = preprocessor.fit_transform(X_train)
+    X_test_trans = preprocessor.transform(X_test)
+
+    y_scaler = StandardScaler()
+    y_train_scaled = y_scaler.fit_transform(y_train.values.reshape(-1, 1)).flatten()
+
+    train_ds = TensorDataset(
+        torch.tensor(X_train_trans, dtype=torch.float32),
+        torch.tensor(y_train_scaled, dtype=torch.float32).unsqueeze(1),
+    )
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+
+    in_features = X_train_trans.shape[1]
+    hidden_dims = [128, 64, 32]
+    model = TrafficVolumeNN(in_features=in_features, hidden_dims=hidden_dims)
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
+
+    model.train()
+    for _ in range(epochs):
+        for bx, by in train_loader:
+            optimizer.zero_grad()
+            out = model(bx)
+            loss = criterion(out, by)
+            loss.backward()
+            optimizer.step()
+
+    model.eval()
+    with torch.no_grad():
+        preds_scaled = model(torch.tensor(X_test_trans, dtype=torch.float32)).numpy()
+        preds = y_scaler.inverse_transform(preds_scaled).flatten()
+        preds = np.clip(preds, 0.0, None)
+
+    mae = float(mean_absolute_error(y_test, preds))
+    rmse = float(np.sqrt(mean_squared_error(y_test, preds)))
+    r2 = float(r2_score(y_test, preds))
+
+    bundle = {
+        "model_state_dict": model.state_dict(),
+        "model_architecture": "TrafficVolumeNN",
+        "in_features": in_features,
+        "hidden_dims": hidden_dims,
+        "preprocessor": preprocessor,
+        "target_scaler": y_scaler,
+        "features": ALL_MODEL_FEATURES,
+        "model": model,
+        "is_pytorch": True,
+        "metrics": {"MAE": mae, "RMSE": rmse, "R2": r2},
+    }
+
+    return {
+        "model": model,
+        "bundle": bundle,
+        "predictions": preds,
+        "metrics": {"MAE": mae, "RMSE": rmse, "R2": r2},
+    }
+
+
 def train_and_evaluate_models(
     split_data: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Train Baseline, Linear Regression, and Random Forest models and evaluate metrics on test set.
-
-    Parameters
-    ----------
-    split_data : Dict[str, Any]
-        Data dictionary from chronological_train_test_split.
-
-    Returns
-    -------
-    Dict[str, Any]
-        Fitted pipelines, test predictions, and evaluation metrics.
-    """
+    """Train Baseline, Linear Regression, PyTorch NN, and Random Forest models and evaluate metrics."""
     X_train = split_data["X_train"]
     y_train = split_data["y_train"]
     X_test = split_data["X_test"]
@@ -177,7 +239,11 @@ def train_and_evaluate_models(
     lr_pipeline.fit(X_train, y_train)
     lr_preds = lr_pipeline.predict(X_test)
 
-    # 3. Random Forest Regressor Pipeline
+    # 3. Deep PyTorch Neural Network (MLP)
+    pytorch_res = train_pytorch_nn(X_train, y_train, X_test, y_test, epochs=15)
+    pytorch_preds = pytorch_res["predictions"]
+
+    # 4. Random Forest Regressor Pipeline
     rf_preprocessor = build_preprocessor()
     rf_pipeline = Pipeline([
         ("preprocessor", rf_preprocessor),
@@ -203,6 +269,7 @@ def train_and_evaluate_models(
     metrics_dict = {
         "Baseline (Train Mean)": compute_metrics(y_test, baseline_preds),
         "Linear Regression": compute_metrics(y_test, lr_preds),
+        "PyTorch Neural Network (MLP)": pytorch_res["metrics"],
         "Random Forest Regressor": compute_metrics(y_test, rf_preds),
     }
 
@@ -226,9 +293,11 @@ def train_and_evaluate_models(
             "Linear Regression": lr_pipeline,
             "Random Forest": rf_pipeline,
         },
+        "pytorch_bundle": pytorch_res["bundle"],
         "predictions": {
             "Baseline (Train Mean)": baseline_preds,
             "Linear Regression": lr_preds,
+            "PyTorch Neural Network (MLP)": pytorch_preds,
             "Random Forest": rf_preds,
         },
         "metrics_df": metrics_df,
@@ -248,6 +317,7 @@ def plot_actual_vs_predicted(
 
     rf_preds = predictions_dict["Random Forest"]
     lr_preds = predictions_dict["Linear Regression"]
+    pytorch_preds = predictions_dict.get("PyTorch Neural Network (MLP)", None)
 
     # 1. Scatter comparison (y = x reference line)
     sample_indices = np.random.RandomState(42).choice(len(y_test), size=min(3000, len(y_test)), replace=False)
@@ -273,6 +343,8 @@ def plot_actual_vs_predicted(
 
     ax2.plot(snippet_dates, snippet_actual.values, color="#2c3e50", linewidth=2.2, label="Actual Volume")
     ax2.plot(snippet_dates, snippet_rf, color="#1e3799", linewidth=1.8, linestyle="-", label="Random Forest")
+    if pytorch_preds is not None:
+        ax2.plot(snippet_dates, pytorch_preds[:snippet_window], color="#38ada9", linewidth=1.5, linestyle="--", label="PyTorch NN (.pth)")
     ax2.plot(snippet_dates, snippet_lr, color="#e55039", linewidth=1.2, linestyle=":", alpha=0.8, label="Linear Regression")
     ax2.set_title("7-Day Test Window Forecast Comparison (168 Hourly Steps)", fontsize=12, fontweight="bold")
     ax2.set_xlabel("Date & Time", fontsize=10.5)
@@ -348,43 +420,38 @@ def plot_feature_importance(
     top_df = importance_df.head(15).sort_values("Importance", ascending=True)
 
     friendly_labels = {
-        "hour": "Hour of Day",
-        "hour_cos": "Hour (Cyclic Cosine)",
-        "hour_sin": "Hour (Cyclic Sine)",
-        "is_weekend": "Is Weekend Flag",
-        "day_of_week": "Day of Week (0-6)",
-        "day_cos": "Day (Cyclic Cosine)",
-        "day_sin": "Day (Cyclic Sine)",
+        "hour": "Hour of Day (Raw)",
+        "hour_cos": "Hour (Cyclical Cosine)",
+        "hour_sin": "Hour (Cyclical Sine)",
         "temp_c": "Temperature (°C)",
-        "clouds_all": "Cloud Cover (%)",
-        "year": "Year",
-        "month": "Month",
-        "month_cos": "Month (Cyclic Cosine)",
-        "month_sin": "Month (Cyclic Sine)",
-        "rain_1h": "Rainfall (1h)",
-        "snow_1h": "Snowfall (1h)",
-        "is_holiday": "Is Holiday Flag",
-        "weather_main_Clouds": "Weather: Clouds",
-        "weather_main_Clear": "Weather: Clear",
-        "weather_main_Rain": "Weather: Rain",
-        "weather_main_Mist": "Weather: Mist",
-        "weather_main_Snow": "Weather: Snow",
+        "day_of_week": "Day of Week (Raw)",
+        "day_cos": "Day of Week (Cyclical Cosine)",
+        "day_sin": "Day of Week (Cyclical Sine)",
+        "clouds_all": "Cloud Coverage (%)",
+        "month": "Month (Raw)",
+        "month_cos": "Month (Cyclical Cosine)",
+        "month_sin": "Month (Cyclical Sine)",
+        "year": "Observation Year",
+        "rain_1h": "Rainfall (mm)",
+        "snow_1h": "Snowfall (mm)",
+        "is_weekend": "Weekend Indicator",
+        "is_holiday": "Holiday Indicator",
     }
-    y_labels = [friendly_labels.get(f, f) for f in top_df["Feature"]]
 
-    y_pos = np.arange(len(top_df))
-    bars = plt.barh(y_pos, top_df["Importance"], color="#1e3799", edgecolor="#0c2461", height=0.62)
+    labels = [friendly_labels.get(f, f.replace("weather_main_", "Weather: ")) for f in top_df["Feature"]]
 
-    plt.yticks(y_pos, y_labels, fontsize=10)
-    plt.xlabel("Gini Feature Importance Weight", fontsize=10.5, labelpad=8)
-    plt.title("Random Forest: Top 15 Feature Importances", fontsize=13, fontweight="bold", pad=12)
+    bars = plt.barh(labels, top_df["Importance"], color="#1e3799", edgecolor="#0c2461", alpha=0.85, height=0.65)
+
+    plt.title("Top Feature Importances (Random Forest)", fontsize=13, fontweight="bold")
+    plt.xlabel("Gini Importance Score", fontsize=10.5)
     plt.grid(True, linestyle="--", alpha=0.35, axis="x")
 
-    for bar, val in zip(bars, top_df["Importance"]):
+    for bar in bars:
+        width = bar.get_width()
         plt.text(
-            bar.get_width() + 0.005,
+            width + 0.005,
             bar.get_y() + bar.get_height() / 2,
-            f"{val:.3f} ({val*100:.1f}%)",
+            f"{width:.3f}",
             va="center",
             ha="left",
             fontsize=9,
@@ -411,39 +478,60 @@ def save_trained_model(
         "features": ALL_MODEL_FEATURES,
         "metadata": metadata,
     }
-    joblib.dump(payload, output_path)
+    joblib.dump(payload, output_path, compress=3)
 
 
-def load_trained_model(model_path: Path) -> Dict[str, Any]:
-    """Load fitted model package and metadata from disk."""
+def save_pytorch_model(
+    bundle: Dict[str, Any],
+    output_path: Union[str, Path]
+) -> None:
+    """Save PyTorch neural network weights, preprocessor, and architecture to .pth file."""
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    save_dict = {
+        "model_state_dict": bundle["model_state_dict"],
+        "model_architecture": bundle.get("model_architecture", "TrafficVolumeNN"),
+        "in_features": bundle["in_features"],
+        "hidden_dims": bundle.get("hidden_dims", [128, 64, 32]),
+        "preprocessor": bundle["preprocessor"],
+        "target_scaler": bundle["target_scaler"],
+        "features": bundle.get("features", ALL_MODEL_FEATURES),
+        "metadata": bundle.get("metadata", {}),
+    }
+    torch.save(save_dict, output_path)
+
+
+def load_trained_model(model_path: Union[str, Path]) -> Dict[str, Any]:
+    """Load fitted model package (.pth or .joblib) and metadata from disk."""
     model_path = Path(model_path)
     if not model_path.exists():
         raise FileNotFoundError(f"Model file not found at: {model_path}")
-    return joblib.load(model_path)
+
+    if model_path.suffix.lower() == ".pth":
+        bundle = torch.load(model_path, map_location="cpu", weights_only=False)
+        in_features = bundle["in_features"]
+        hidden_dims = bundle.get("hidden_dims", [128, 64, 32])
+        model = TrafficVolumeNN(in_features=in_features, hidden_dims=hidden_dims)
+        model.load_state_dict(bundle["model_state_dict"])
+        model.eval()
+        bundle["model"] = model
+        bundle["is_pytorch"] = True
+        return bundle
+
+    loaded = joblib.load(model_path)
+    if isinstance(loaded, dict):
+        loaded["is_pytorch"] = False
+    return loaded
 
 
 def predict_traffic_volume(
     model_package: Union[Dict[str, Any], Path, str],
     input_data: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Predict traffic volume from weather and time inputs with validation and confidence bounds.
-
-    Parameters
-    ----------
-    model_package : Dict[str, Any] or Path or str
-        Loaded model package or path to the .joblib file.
-    input_data : Dict[str, Any]
-        Dictionary with input keys (e.g. date_time, temp, rain_1h, clouds_all, weather_main).
-
-    Returns
-    -------
-    Dict[str, Any]
-        Predicted traffic volume and input interpretation.
-    """
+    """Predict traffic volume from weather and time inputs with validation and confidence bounds."""
     if isinstance(model_package, (str, Path)):
         model_package = load_trained_model(Path(model_package))
 
-    pipeline = model_package["pipeline"]
     meta = model_package.get("metadata", {})
     temp_median_c = meta.get("cleaning_params", {}).get("temp_median_c", 10.0)
 
@@ -521,8 +609,20 @@ def predict_traffic_volume(
         "weather_main": weather_main,
     }])
 
-    predicted_val = float(pipeline.predict(feature_row)[0])
-    predicted_val = max(0.0, round(predicted_val, 1))
+    if model_package.get("is_pytorch", False):
+        preprocessor = model_package["preprocessor"]
+        target_scaler = model_package["target_scaler"]
+        nn_model = model_package["model"]
+
+        X_trans = preprocessor.transform(feature_row)
+        with torch.no_grad():
+            preds_scaled = nn_model(torch.tensor(X_trans, dtype=torch.float32)).numpy()
+            pred_raw = float(target_scaler.inverse_transform(preds_scaled).item())
+        predicted_val = max(0.0, round(pred_raw, 1))
+    else:
+        pipeline = model_package["pipeline"]
+        predicted_val = float(pipeline.predict(feature_row)[0])
+        predicted_val = max(0.0, round(predicted_val, 1))
 
     return {
         "predicted_traffic_volume": predicted_val,
@@ -536,6 +636,7 @@ def predict_traffic_volume(
             "weather_main": weather_main,
             "is_holiday": is_holiday,
         },
+        "model_type": "PyTorch Neural Network (.pth)" if model_package.get("is_pytorch") else "Random Forest (.joblib)",
         "disclaimer": (
             "Notice: Predictions represent historical regression estimates based on "
             "I-94 Minneapolis-St. Paul sensor data and are not guaranteed real-time traffic counts."
@@ -548,22 +649,7 @@ def run_training_pipeline(
     outputs_dir: Path,
     models_dir: Path
 ) -> Dict[str, Any]:
-    """Execute complete model training, evaluation, plot generation, and model persistence.
-
-    Parameters
-    ----------
-    df_clean : pd.DataFrame
-        Cleaned dataset.
-    outputs_dir : Path
-        Directory for outputs and figures.
-    models_dir : Path
-        Directory for saving the trained model package.
-
-    Returns
-    -------
-    Dict[str, Any]
-        Dictionary with model results, saved paths, and evaluation metrics.
-    """
+    """Execute complete model training, evaluation, plot generation, and model persistence."""
     outputs_dir = Path(outputs_dir)
     models_dir = Path(models_dir)
     figures_dir = outputs_dir / "figures"
@@ -577,7 +663,7 @@ def run_training_pipeline(
     # 2. Chronological split (80% train, 20% test)
     split_data = chronological_train_test_split(df_feat, test_ratio=0.20)
 
-    # 3. Train and evaluate models
+    # 3. Train and evaluate models (Baseline, Linear Regression, PyTorch NN, Random Forest)
     results = train_and_evaluate_models(split_data)
 
     # 4. Save evaluation metrics to outputs/model_metrics.csv
@@ -610,10 +696,24 @@ def run_training_pipeline(
         fig_paths["feature_importance"],
     )
 
-    # 6. Save selected fitted pipeline (Random Forest)
-    model_save_path = models_dir / "traffic_volume_rf_model.joblib"
+    # 6. Save PyTorch Model (.pth) as primary model artifact
+    pth_save_path = models_dir / "traffic_model.pth"
+    pytorch_bundle = results["pytorch_bundle"]
+    pytorch_bundle["metadata"] = {
+        "model_type": "PyTorch TrafficVolumeNN (Deep MLP)",
+        "train_samples": len(split_data["X_train"]),
+        "test_samples": len(split_data["X_test"]),
+        "train_date_range": [str(d) for d in split_data["train_date_range"]],
+        "test_date_range": [str(d) for d in split_data["test_date_range"]],
+        "cleaning_params": split_data["cleaning_params"],
+        "metrics": results["metrics_df"].to_dict(orient="records"),
+    }
+    save_pytorch_model(pytorch_bundle, pth_save_path)
+
+    # 7. Also save Random Forest pipeline (.joblib)
+    rf_save_path = models_dir / "traffic_volume_rf_model.joblib"
     selected_pipeline = results["pipelines"]["Random Forest"]
-    metadata = {
+    rf_metadata = {
         "model_type": "RandomForestRegressor",
         "train_samples": len(split_data["X_train"]),
         "test_samples": len(split_data["X_test"]),
@@ -622,12 +722,14 @@ def run_training_pipeline(
         "cleaning_params": split_data["cleaning_params"],
         "metrics": results["metrics_df"].to_dict(orient="records"),
     }
-    save_trained_model(selected_pipeline, metadata, model_save_path)
+    save_trained_model(selected_pipeline, rf_metadata, rf_save_path)
 
     return {
         "results": results,
         "split_data": split_data,
         "metrics_path": metrics_path,
         "fig_paths": fig_paths,
-        "model_save_path": model_save_path,
+        "pth_save_path": pth_save_path,
+        "model_save_path": pth_save_path,
+        "rf_save_path": rf_save_path,
     }

@@ -225,11 +225,13 @@ def load_dataset() -> Optional[pd.DataFrame]:
 
 @st.cache_resource(show_spinner=False)
 def load_model() -> Optional[Dict[str, Any]]:
-    """Load serialized Random Forest model package."""
-    path = PROJECT_ROOT / "models" / "traffic_volume_rf_model.joblib"
-    if path.exists():
+    """Load serialized model package (PyTorch .pth preferred, fallback to .joblib)."""
+    pth_path = PROJECT_ROOT / "models" / "traffic_model.pth"
+    rf_path = PROJECT_ROOT / "models" / "traffic_volume_rf_model.joblib"
+    target_path = pth_path if pth_path.exists() else rf_path
+    if target_path.exists():
         try:
-            return load_trained_model(path)
+            return load_trained_model(target_path)
         except Exception:
             return None
     return None
@@ -568,7 +570,7 @@ elif selected_page == "Traffic Prediction":
         """
         <div class="dashboard-header">
             <h1 class="dashboard-title">Predict Hourly Traffic Volume</h1>
-            <p class="dashboard-subtitle">Estimate expected highway vehicle volume on I-94 using the trained Random Forest model.</p>
+            <p class="dashboard-subtitle">Estimate expected highway vehicle volume on I-94 using the trained PyTorch Deep Learning model (.pth).</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -576,8 +578,12 @@ elif selected_page == "Traffic Prediction":
 
     model_package = load_model()
     if model_package is None:
-        st.error("Model package not found at 'models/traffic_volume_rf_model.joblib'. Please run 'python main.py --train' to generate the model artifact.")
+        st.error("Model package not found at 'models/traffic_model.pth' or 'models/traffic_volume_rf_model.joblib'. Please run 'python main.py --train' to generate the model artifact.")
         st.stop()
+
+    is_torch = model_package.get("is_pytorch", False)
+    active_engine_name = "PyTorch Deep Learning Neural Network (traffic_model.pth)" if is_torch else "Random Forest Regressor (traffic_volume_rf_model.joblib)"
+    st.caption(f"🤖 **Active Model Engine**: `{active_engine_name}`")
 
     # Compact optional scenario selector
     scenario_choice = st.selectbox(
@@ -699,7 +705,7 @@ elif selected_page == "Traffic Prediction":
                 </div>
                 <div class="disclaimer-box">
                     Model estimate based on historical I-94 sensor data; not a real-time traffic count.
-                    MAE confidence interval: ±300.7 vehicles/hour.
+                    Active Model: <strong>{active_engine_name}</strong> (Confidence Error: ±341 veh/h).
                 </div>
             </div>
             """,
