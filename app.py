@@ -399,21 +399,28 @@ if selected_page == "Overview":
     # 3. Key Findings (Computed dynamically from actual output CSVs)
     st.markdown('<div class="section-label">Key Analysis Findings</div>', unsafe_allow_html=True)
 
-    hourly_df = load_hourly_summary()
     busiest_hour = 16
     busiest_mean = 5664.0
-    if hourly_df is not None and "mean" in hourly_df.columns:
-        max_idx = hourly_df["mean"].idxmax()
-        busiest_hour = int(hourly_df.loc[max_idx, "hour"])
-        busiest_mean = float(hourly_df.loc[max_idx, "mean"])
-
-    weekday_df = load_weekday_summary()
     weekday_mean, weekend_mean = 3533.3, 2570.7
     diff_pct = 37.4
-    if weekday_df is not None and "mean" in weekday_df.columns and len(weekday_df) >= 2:
-        weekday_mean = float(weekday_df[weekday_df["is_weekend"] == 0]["mean"].values[0])
-        weekend_mean = float(weekday_df[weekday_df["is_weekend"] == 1]["mean"].values[0])
-        diff_pct = ((weekday_mean - weekend_mean) / weekend_mean) * 100
+
+    if df is not None and "date_time" in df.columns:
+        try:
+            hours = df["date_time"].dt.hour
+            hourly_grp = df.groupby(hours)["traffic_volume"].mean()
+            if not hourly_grp.empty:
+                busiest_hour = int(hourly_grp.idxmax())
+                busiest_mean = float(hourly_grp.max())
+
+            dayofweek = df["date_time"].dt.dayofweek
+            is_wknd = dayofweek >= 5
+            wk_grp = df.groupby(is_wknd)["traffic_volume"].mean()
+            if False in wk_grp and True in wk_grp:
+                weekday_mean = float(wk_grp[False])
+                weekend_mean = float(wk_grp[True])
+                diff_pct = ((weekday_mean - weekend_mean) / weekend_mean) * 100
+        except Exception:
+            pass
 
     kf1, kf2, kf3 = st.columns(3)
     with kf1:
