@@ -681,28 +681,7 @@ def generate_all_eda_outputs(
     # 2. Analyze traffic patterns
     patterns = analyze_traffic_patterns(df_clean)
 
-    # 3. Save aggregated CSV summaries
-    csv_paths = {
-        "hourly": outputs_dir / "hourly_traffic_summary.csv",
-        "daily": outputs_dir / "daily_traffic_summary.csv",
-        "monthly": outputs_dir / "monthly_traffic_summary.csv",
-        "yearly": outputs_dir / "yearly_traffic_summary.csv",
-        "weekday_vs_weekend": outputs_dir / "weekday_vs_weekend_summary.csv",
-        "weather_main": outputs_dir / "weather_main_summary.csv",
-        "weather_description": outputs_dir / "weather_description_summary.csv",
-        "correlation": outputs_dir / "correlation_matrix.csv",
-    }
-
-    patterns["hourly_summary"].to_csv(csv_paths["hourly"], index=False)
-    patterns["daily_summary"].to_csv(csv_paths["daily"], index=False)
-    patterns["monthly_summary"].to_csv(csv_paths["monthly"], index=False)
-    patterns["yearly_summary"].to_csv(csv_paths["yearly"], index=False)
-    patterns["weekday_vs_weekend_summary"].to_csv(csv_paths["weekday_vs_weekend"], index=False)
-    patterns["weather_main_summary"].to_csv(csv_paths["weather_main"], index=False)
-    patterns["weather_desc_summary"].to_csv(csv_paths["weather_description"], index=False)
-    patterns["correlation_matrix"].to_csv(csv_paths["correlation"])
-
-    # 4. Generate all required PNG figures
+    # 3. Generate all required PNG figures
     figure_paths = {
         "traffic_over_time": figures_dir / "traffic_over_time.png",
         "average_traffic_by_hour": figures_dir / "average_traffic_by_hour.png",
@@ -725,17 +704,10 @@ def generate_all_eda_outputs(
     plot_rainfall_vs_traffic(df_clean, figure_paths["rainfall_vs_traffic"])
     plot_correlation_heatmap(patterns["correlation_matrix"], figure_paths["correlation_heatmap"])
 
-    # 5. Produce outputs/eda_summary.txt
-    summary_txt_path = outputs_dir / "eda_summary.txt"
-    summary_text = _build_eda_summary_text(audit, patterns)
-    summary_txt_path.write_text(summary_text, encoding="utf-8")
-
     return {
         "audit": audit,
         "patterns": patterns,
-        "csv_paths": csv_paths,
         "figure_paths": figure_paths,
-        "summary_txt_path": summary_txt_path,
         "df_clean": df_clean,
     }
 

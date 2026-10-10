@@ -672,11 +672,7 @@ def run_training_pipeline(
     # 3. Train and evaluate models (Baseline, Linear Regression, PyTorch NN, Random Forest)
     results = train_and_evaluate_models(split_data)
 
-    # 4. Save evaluation metrics to outputs/model_metrics.csv
-    metrics_path = outputs_dir / "model_metrics.csv"
-    results["metrics_df"].to_csv(metrics_path, index=False)
-
-    # 5. Generate and save diagnostic figures
+    # 4. Generate and save diagnostic figures
     fig_paths = {
         "actual_vs_predicted": figures_dir / "actual_vs_predicted.png",
         "prediction_residuals": figures_dir / "prediction_residuals.png",
@@ -719,7 +715,6 @@ def run_training_pipeline(
     return {
         "results": results,
         "split_data": split_data,
-        "metrics_path": metrics_path,
         "fig_paths": fig_paths,
         "pth_save_path": pth_save_path,
         "model_save_path": pth_save_path,

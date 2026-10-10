@@ -137,16 +137,6 @@ UrbanTrafficFlowOptimization/
 │   │   ├── traffic_over_time.png                 # Longitudinal 6-year daily/monthly trend
 │   │   ├── weather_traffic.png                   # Categorical weather volume rankings
 │   │   └── weekday_vs_weekend.png                # Weekday bimodal vs weekend unimodal overlay
-│   ├── correlation_matrix.csv                    # Feature correlation values
-│   ├── daily_traffic_summary.csv                 # Daily mean, std, median aggregates
-│   ├── eda_summary.txt                           # Quantitative findings and data audit report
-│   ├── hourly_traffic_summary.csv                 # Hourly aggregates across 24 hours
-│   ├── model_metrics.csv                         # Out-of-sample MAE, RMSE, and R² metrics
-│   ├── monthly_traffic_summary.csv                # Monthly volume statistics
-│   ├── weather_description_summary.csv           # Granular weather breakdown
-│   ├── weather_main_summary.csv                  # Main weather condition aggregates
-│   ├── weekday_vs_weekend_summary.csv            # Commute vs weekend volume aggregates
-│   └── yearly_traffic_summary.csv                 # Annual traffic volume statistics
 │
 ├── reports/
 │   ├── final_project_report.md                   # Comprehensive academic technical report

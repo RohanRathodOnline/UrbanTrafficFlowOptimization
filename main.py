@@ -160,8 +160,7 @@ def main():
             for name, p in train_output["fig_paths"].items():
                 print(f"  - {name:<25}: {p.name}")
 
-            print(f"\n[Metrics Saved]           : {train_output['metrics_path'].name}")
-            print(f"[Model Saved]             : {train_output['model_save_path'].name}")
+            print(f"\n[Model Saved]             : {train_output['model_save_path'].name}")
             print("=" * 70)
 
         except Exception as exc:

@@ -50,29 +50,19 @@ UrbanTrafficFlowOptimization/
 ├── notebooks/
 │   └── Urban_Traffic_Flow_Optimization.ipynb     # Pre-executed Jupyter Notebook with all outputs
 ├── outputs/
-│   ├── figures/                                  # Publication-quality diagnostic figures
-│   │   ├── actual_vs_predicted.png               # Regression model test set fit comparison
-│   │   ├── average_traffic_by_day.png
-│   │   ├── average_traffic_by_hour.png
-│   │   ├── correlation_heatmap.png
-│   │   ├── feature_importance.png                # Top Gini impurity feature rankings
-│   │   ├── monthly_traffic.png
-│   │   ├── prediction_residuals.png              # Residual scatter and error distribution
-│   │   ├── rainfall_vs_traffic.png
-│   │   ├── temperature_vs_traffic.png
-│   │   ├── traffic_over_time.png
-│   │   ├── weather_traffic.png
-│   │   └── weekday_vs_weekend.png
-│   ├── correlation_matrix.csv                    # Feature Pearson correlation table
-│   ├── daily_traffic_summary.csv                 # Monday–Sunday aggregated statistics
-│   ├── eda_summary.txt                           # Detailed statistical findings and caveats
-│   ├── hourly_traffic_summary.csv                 # 24-hour diurnal aggregated statistics
-│   ├── model_metrics.csv                         # Out-of-sample MAE, RMSE, and R² metrics
-│   ├── monthly_traffic_summary.csv                # January–December seasonal statistics
-│   ├── weather_description_summary.csv           # Granular weather condition aggregates
-│   ├── weather_main_summary.csv                  # Main weather condition aggregates
-│   ├── weekday_vs_weekend_summary.csv            # Commute vs. weekend volume aggregates
-│   └── yearly_traffic_summary.csv                 # Annual traffic volume statistics
+│   └── figures/                                  # Publication-quality diagnostic figures
+│       ├── actual_vs_predicted.png               # Regression model test set fit comparison
+│       ├── average_traffic_by_day.png
+│       ├── average_traffic_by_hour.png
+│       ├── correlation_heatmap.png
+│       ├── feature_importance.png                # Top Gini impurity feature rankings
+│       ├── monthly_traffic.png
+│       ├── prediction_residuals.png              # Residual scatter and error distribution
+│       ├── rainfall_vs_traffic.png
+│       ├── temperature_vs_traffic.png
+│       ├── traffic_over_time.png
+│       ├── weather_traffic.png
+│       └── weekday_vs_weekend.png
 ├── reports/
 │   ├── final_project_report.md                   # Comprehensive academic capstone report
 │   └── project_demo_guide.md                     # Step-by-step viva & live evaluation demo guide
