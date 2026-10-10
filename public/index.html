@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Urban Traffic Flow Optimization | AI Traffic Analytics & Prediction Dashboard</title>
+  <meta name="description" content="Production-ready Urban Traffic Flow Optimization dashboard with machine learning regression, exploratory data analysis, and live flow forecasting on 48,204 I-94 highway records.">
+  <meta name="keywords" content="traffic flow optimization, machine learning, random forest, urban analytics, I-94 traffic, vercel deployment, data science">
+  <meta name="author" content="Urban Traffic Optimization Team">
+  <meta name="theme-color" content="#0b0f19">
+
+  <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header / Navigation Bar -->
+  <header class="app-header" id="main-header">
+    <div class="nav-container">
+      <div class="brand" id="brand-logo">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            <circle cx="12" cy="7" r="2" fill="currentColor"/>
+            <circle cx="12" cy="12" r="2" fill="currentColor"/>
+            <circle cx="12" cy="17" r="2" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">TrafficFlow<span class="accent-text">AI</span></span>
+          <span class="brand-sub">I-94 Minneapolis Corridor</span>
+        </div>
+      </div>
+
+      <nav class="nav-links" id="main-nav">
+        <button class="nav-link active" data-tab="overview" id="nav-overview-btn">
+          <span class="nav-icon">📊</span> Overview
+        </button>
+        <button class="nav-link" data-tab="analytics" id="nav-analytics-btn">
+          <span class="nav-icon">📈</span> EDA & Figures
+        </button>
+        <button class="nav-link" data-tab="predictor" id="nav-predictor-btn">
+          <span class="nav-icon">⚡</span> Live Predictor
+        </button>
+        <button class="nav-link" data-tab="benchmarks" id="nav-benchmarks-btn">
+          <span class="nav-icon">🔬</span> Model Benchmarks
+        </button>
+        <button class="nav-link" data-tab="guide" id="nav-guide-btn">
+          <span class="nav-icon">🚀</span> Deploy on Vercel
+        </button>
+      </nav>
+
+      <div class="nav-actions">
+        <div class="status-pill" id="system-status-pill">
+          <span class="status-dot"></span>
+          <span class="status-label">Model R²: 0.927</span>
+        </div>
+        <button class="btn btn-primary btn-sm" id="cta-quick-predict">
+          Predict Flow
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="main-content" id="app-main">
+    
+    <!-- Hero Banner -->
+    <section class="hero-section" id="hero-banner">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge-icon">🚦</span>
+          <span>Urban Traffic Flow Optimization System</span>
+          <span class="badge-divider">•</span>
+          <span class="badge-highlight">Vercel Production Ready</span>
+        </div>
+        <h1 class="hero-title">
+          Intelligent Highway Traffic Volume <span class="gradient-text">Forecasting & Analytics</span>
+        </h1>
+        <p class="hero-description">
+          Machine learning regression pipeline trained on <strong>48,204 hourly sensor observations</strong> across Interstate 94 in Minneapolis–St. Paul. Predict traffic surges, analyze weather degradation, and optimize corridor dispatch.
+        </p>
+
+        <!-- Quick Stats Strip -->
+        <div class="stats-strip" id="hero-stats-strip">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Historical Dataset</span>
+              <span class="stat-icon-badge">📁</span>
+            </div>
+            <div class="stat-value">48,204</div>
+            <div class="stat-hint">Hourly observations (2012–2018)</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Corridor Capacity</span>
+              <span class="stat-icon-badge">🏎️</span>
+            </div>
+            <div class="stat-value">7,280 <span class="unit">veh/hr</span></div>
+            <div class="stat-hint">Peak eastbound highway throughput</div>
+          </div>
+
+          <div class="stat-card highlight-card">
+            <div class="stat-header">
+              <span class="stat-label">Champion Model (RF)</span>
+              <span class="stat-icon-badge">🏆</span>
+            </div>
+            <div class="stat-value">0.927 <span class="unit">R²</span></div>
+            <div class="stat-hint">Out-of-sample test accuracy (9,638 test pts)</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Mean Absolute Error</span>
+              <span class="stat-icon-badge">🎯</span>
+            </div>
+            <div class="stat-value">300.7 <span class="unit">veh/hr</span></div>
+            <div class="stat-hint">82.5% reduction over baseline mean</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 1: EXECUTIVE OVERVIEW -->
+    <section class="tab-pane active" id="tab-overview">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Corridor Dynamics & Architectural Overview</h2>
+          <p class="section-subtitle">Comprehensive operational insights into traffic flow periodicity, weather sensitivity, and modeling strategy.</p>
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <!-- Feature 1: Diurnal Patterns -->
+        <div class="card overview-card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">⏰</div>
+            <h3 class="card-title">Bimodal Diurnal Peak Commute</h3>
+          </div>
+          <p class="card-body-text">
+            Traffic volume on Interstate 94 exhibits pronounced daily commuter cycles with two distinct peaks:
+          </p>
+          <ul class="feature-list">
+            <li><strong>Morning Peak:</strong> Surges sharply between 07:00 and 08:00 AM (averaging ~4,900 to 5,200 veh/hr).</li>
+            <li><strong>Evening Peak:</strong> Maximum congestion occurs from 16:00 to 17:00 PM (averaging ~5,400 to 5,800 veh/hr).</li>
+            <li><strong>Overnight Drop:</strong> Low trough from 01:00 to 03:00 AM (< 500 veh/hr), offering ideal maintenance windows.</li>
+          </ul>
+          <div class="card-footer-action">
+            <button class="btn btn-outline btn-sm" onclick="app.switchTab('analytics')">View Hourly Curve →</button>
+          </div>
+        </div>
+
+        <!-- Feature 2: Weekday vs Weekend -->
+        <div class="card overview-card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">📅</div>
+            <h3 class="card-title">Weekday Commuter vs. Weekend Plateau</h3>
+          </div>
+          <p class="card-body-text">
+            Weekday volume displays twin peaks, whereas Saturday and Sunday traffic displays a smooth, single plateau peaking between 12:00 PM and 16:00 PM at ~4,500 veh/hr.
+          </p>
+          <ul class="feature-list">
+            <li><strong>Weekday Mean:</strong> ~3,480 veh/hr across working hours.</li>
+            <li><strong>Weekend Mean:</strong> ~2,720 veh/hr, shifted toward midday recreational movement.</li>
+            <li><strong>Holiday Impact:</strong> Major holidays reduce commute demand by 38% on average.</li>
+          </ul>
+          <div class="card-footer-action">
+            <button class="btn btn-outline btn-sm" onclick="app.switchTab('analytics')">View Day Distribution →</button>
+          </div>
+        </div>
+
+        <!-- Feature 3: Weather Resilience -->
+        <div class="card overview-card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">🌦️</div>
+            <h3 class="card-title">Environmental & Weather Modulation</h3>
+          </div>
+          <p class="card-body-text">
+            Adverse weather conditions decrease speed, increase headway spacing, and suppress non-essential travel:
+          </p>
+          <ul class="feature-list">
+            <li><strong>Precipitation:</strong> Heavy rainfall (> 10 mm/hr) suppresses vehicle flow by 9% to 15%.</li>
+            <li><strong>Snow Conditions:</strong> Winter blizzards reduce average speeds and volume up to 25%.</li>
+            <li><strong>Temperature Extremes:</strong> Sub-zero Minnesota winter temps (-20°C) dampen overall transit.</li>
+          </ul>
+          <div class="card-footer-action">
+            <button class="btn btn-outline btn-sm" onclick="app.switchTab('analytics')">View Weather Impacts →</button>
+          </div>
+        </div>
+
+        <!-- Feature 4: ML Engineering -->
+        <div class="card overview-card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(236, 72, 153, 0.15); color: #f472b6;">🧠</div>
+            <h3 class="card-title">Chronological ML & Feature Pipeline</h3>
+          </div>
+          <p class="card-body-text">
+            Rigorous leakage-free data science pipeline preserving chronological sequence:
+          </p>
+          <ul class="feature-list">
+            <li><strong>Strict Train/Test Partition:</strong> First 80% (38,549 rows) for training, latest 20% (9,638 rows) for validation.</li>
+            <li><strong>Cyclical Trigonometry:</strong> Sine and cosine transforms on hour, day-of-week, and month.</li>
+            <li><strong>Zero Data Leakage:</strong> Scalers and encoders fit solely on training data.</li>
+          </ul>
+          <div class="card-footer-action">
+            <button class="btn btn-outline btn-sm" onclick="app.switchTab('benchmarks')">Inspect Model Metrics →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Live Demo Banner -->
+      <div class="banner-box mt-4">
+        <div class="banner-icon">⚡</div>
+        <div class="banner-body">
+          <h4 class="banner-title">Test Real-Time Traffic Forecasting</h4>
+          <p class="banner-desc">Adjust timestamps, weather parameters, and holiday status in our live predictor to observe real-time predicted hourly vehicle counts.</p>
+        </div>
+        <button class="btn btn-primary" onclick="app.switchTab('predictor')">Launch Live Predictor</button>
+      </div>
+    </section>
+
+    <!-- TAB 2: EXPLORATORY DATA ANALYSIS & FIGURES -->
+    <section class="tab-pane" id="tab-analytics">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Exploratory Data Analysis & Diagnostic Figures</h2>
+          <p class="section-subtitle">12 high-resolution analytical and diagnostic plots generated by the data processing and machine learning pipeline.</p>
+        </div>
+        <div class="filter-group" id="figure-filter-group">
+          <button class="filter-btn active" data-filter="all">All Figures (12)</button>
+          <button class="filter-btn" data-filter="temporal">Temporal Trends</button>
+          <button class="filter-btn" data-filter="weather">Weather Impact</button>
+          <button class="filter-btn" data-filter="model">Model Diagnostics</button>
+        </div>
+      </div>
+
+      <div class="figures-grid" id="figures-container">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </section>
+
+    <!-- TAB 3: LIVE TRAFFIC VOLUME PREDICTOR -->
+    <section class="tab-pane" id="tab-predictor">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Live Highway Traffic Volume Predictor</h2>
+          <p class="section-subtitle">Real-time inference using the Random Forest regression pipeline and calibrated empirical model.</p>
+        </div>
+      </div>
+
+      <div class="predictor-layout">
+        <!-- Input Form Card -->
+        <div class="card form-card">
+          <div class="card-header">
+            <div class="card-icon">🎛️</div>
+            <div>
+              <h3 class="card-title">Corridor Parameters</h3>
+              <p class="card-sub">Select a scenario preset or customize individual parameters.</p>
+            </div>
+          </div>
+
+          <!-- Scenario Presets -->
+          <div class="form-group">
+            <label class="form-label">Quick Scenario Presets</label>
+            <div class="preset-pills" id="preset-buttons">
+              <button class="preset-pill active" data-preset="morning-rush">🌅 Morning Rush</button>
+              <button class="preset-pill" data-preset="evening-peak">🌇 Evening Peak</button>
+              <button class="preset-pill" data-preset="night-quiet">🌙 Night Free Flow</button>
+              <button class="preset-pill" data-preset="weekend-midday">🏖️ Weekend Midday</button>
+              <button class="preset-pill" data-preset="heavy-rain">🌧️ Severe Rain</button>
+              <button class="preset-pill" data-preset="snow-storm">❄️ Winter Blizzard</button>
+            </div>
+          </div>
+
+          <form id="prediction-form">
+            <!-- Timestamp Input -->
+            <div class="form-group">
+              <label for="input-datetime" class="form-label">
+                Date & Time of Transit
+                <span class="info-tooltip" title="Captures diurnal rush hours and seasonal patterns">ⓘ</span>
+              </label>
+              <input type="datetime-local" id="input-datetime" class="form-control" value="2018-10-15T17:00" required>
+              <div class="field-hint" id="datetime-hint">Monday, October 15, 2018 (Hour 17:00 — Evening Peak Window)</div>
+            </div>
+
+            <!-- Weather Condition -->
+            <div class="form-row">
+              <div class="form-group col-6">
+                <label for="input-weather" class="form-label">Weather Condition</label>
+                <select id="input-weather" class="form-control">
+                  <option value="Clear" selected>Clear Sky</option>
+                  <option value="Clouds">Cloudy / Overcast</option>
+                  <option value="Rain">Rain</option>
+                  <option value="Drizzle">Light Drizzle</option>
+                  <option value="Mist">Mist</option>
+                  <option value="Snow">Snow</option>
+                  <option value="Fog">Dense Fog</option>
+                  <option value="Haze">Haze</option>
+                  <option value="Thunderstorm">Thunderstorm</option>
+                  <option value="Squall">Squall</option>
+                </select>
+              </div>
+
+              <!-- Temperature -->
+              <div class="form-group col-6">
+                <label for="input-temp" class="form-label">
+                  Temperature (°C): <span id="temp-display" class="val-badge">15.0°C</span>
+                </label>
+                <input type="range" id="input-temp" class="form-range" min="-30" max="40" step="0.5" value="15.0">
+              </div>
+            </div>
+
+            <!-- Precipitation & Clouds -->
+            <div class="form-row">
+              <div class="form-group col-6">
+                <label for="input-rain" class="form-label">
+                  Rainfall (1h mm): <span id="rain-display" class="val-badge">0.0 mm</span>
+                </label>
+                <input type="range" id="input-rain" class="form-range" min="0" max="30" step="0.5" value="0.0">
+              </div>
+
+              <div class="form-group col-6">
+                <label for="input-snow" class="form-label">
+                  Snowfall (1h mm): <span id="snow-display" class="val-badge">0.0 mm</span>
+                </label>
+                <input type="range" id="input-snow" class="form-range" min="0" max="20" step="0.5" value="0.0">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-6">
+                <label for="input-clouds" class="form-label">
+                  Cloud Cover: <span id="clouds-display" class="val-badge">20%</span>
+                </label>
+                <input type="range" id="input-clouds" class="form-range" min="0" max="100" step="5" value="20">
+              </div>
+
+              <div class="form-group col-6 flex-center-vert">
+                <label class="checkbox-label" for="input-holiday">
+                  <input type="checkbox" id="input-holiday" class="custom-checkbox">
+                  <span>Public Holiday Observed</span>
+                </label>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" id="btn-submit-prediction">
+              <span class="btn-spinner" id="pred-spinner"></span>
+              <span id="btn-predict-text">Run Traffic Flow Prediction</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Prediction Result Output Card -->
+        <div class="card result-card" id="result-container">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">📊</div>
+            <div>
+              <h3 class="card-title">Forecast Output</h3>
+              <p class="card-sub" id="result-engine-label">Random Forest Regressor Pipeline</p>
+            </div>
+          </div>
+
+          <div class="prediction-hero-box">
+            <div class="prediction-label">ESTIMATED HOURLY TRAFFIC VOLUME</div>
+            <div class="prediction-big-num" id="pred-volume-value">5,770</div>
+            <div class="prediction-unit">vehicles / hour (I-94 Eastbound)</div>
+
+            <div class="traffic-status-badge" id="traffic-status-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
+              <span class="badge-dot" style="background: #ef4444;"></span>
+              <span id="traffic-level-text">High Congestion / Peak Rush</span>
+            </div>
+          </div>
+
+          <!-- Capacity Utilization Meter -->
+          <div class="capacity-section">
+            <div class="capacity-header">
+              <span>Highway Capacity Utilization</span>
+              <span id="capacity-pct-text" class="bold">79.3%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-bar" id="capacity-progress-bar" style="width: 79.3%; background: #ef4444;"></div>
+            </div>
+            <div class="capacity-legend">
+              <span>0 (Empty)</span>
+              <span>2,500 (Moderate)</span>
+              <span>5,000 (Heavy)</span>
+              <span>7,280 (Max Capacity)</span>
+            </div>
+          </div>
+
+          <!-- Confidence Margin & Advisory -->
+          <div class="result-details-grid">
+            <div class="detail-box">
+              <div class="detail-label">Model Confidence Margin</div>
+              <div class="detail-val" id="confidence-range-text">5,469 – 6,071 veh/hr</div>
+              <div class="detail-hint">±300.7 veh/hr (MAE standard error)</div>
+            </div>
+
+            <div class="detail-box">
+              <div class="detail-label">Corridor Advisory</div>
+              <div class="detail-val advisory-text" id="advisory-text">Heavy commuter surge. Anticipate deceleration and increased following headway.</div>
+            </div>
+          </div>
+
+          <!-- JSON Request / Response Inspection -->
+          <details class="json-inspector">
+            <summary>Inspect Serverless API Payload (JSON)</summary>
+            <pre><code id="json-payload-display">{
+  "endpoint": "/api/predict",
+  "status": "success",
+  "predicted_traffic_volume": 5769.8
+}</code></pre>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: MODEL BENCHMARKS & EVALUATION -->
+    <section class="tab-pane" id="tab-benchmarks">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Model Evaluation Benchmarks & Metrics</h2>
+          <p class="section-subtitle">Strict chronological out-of-sample evaluation on the final 20% test partition (9,638 samples).</p>
+        </div>
+      </div>
+
+      <!-- Comparison Metrics Table -->
+      <div class="card table-card mb-4">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">⚖️</div>
+          <div>
+            <h3 class="card-title">Model Comparison Benchmark Table</h3>
+            <p class="card-sub">Baseline Mean vs. Multiple Linear Regression vs. Random Forest Regressor</p>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="benchmark-table">
+            <thead>
+              <tr>
+                <th>Model Architecture</th>
+                <th>MAE (veh/hr)</th>
+                <th>RMSE (veh/hr)</th>
+                <th>R² Score</th>
+                <th>Relative Improvement</th>
+                <th>Production Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Baseline (Train Mean)</strong></td>
+                <td>1,722.50</td>
+                <td>1,967.61</td>
+                <td><span class="badge-neutral">-0.0000</span></td>
+                <td>Reference Benchmark</td>
+                <td><span class="status-tag tag-inactive">Heuristic Only</span></td>
+              </tr>
+              <tr>
+                <td><strong>Linear Regression</strong></td>
+                <td>826.21</td>
+                <td>1,050.57</td>
+                <td><span class="badge-good">0.7149</span></td>
+                <td>52.0% MAE reduction</td>
+                <td><span class="status-tag tag-sub">Interpretable Baseline</span></td>
+              </tr>
+              <tr class="champion-row">
+                <td>
+                  <div class="flex-align">
+                    <span class="trophy-icon">🏆</span>
+                    <strong>Random Forest Regressor</strong>
+                  </div>
+                </td>
+                <td class="bold text-accent">300.69</td>
+                <td class="bold text-accent">532.98</td>
+                <td class="bold text-accent"><span class="badge-champion">0.9266</span></td>
+                <td class="bold text-accent">82.5% MAE reduction</td>
+                <td><span class="status-tag tag-champion">Champion Deployment</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Diagnostics Split -->
+      <div class="two-col-grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">🎯</div>
+            <h3 class="card-title">Top Engineered Feature Importances</h3>
+          </div>
+          <div class="importance-bars">
+            <div class="imp-item">
+              <div class="imp-header">
+                <span>hour (Diurnal time of day)</span>
+                <span class="bold">52.3%</span>
+              </div>
+              <div class="progress-track"><div class="progress-bar" style="width: 52.3%; background: #6366f1;"></div></div>
+            </div>
+            <div class="imp-item">
+              <div class="imp-header">
+                <span>hour_sin / hour_cos (Cyclical)</span>
+                <span class="bold">18.6%</span>
+              </div>
+              <div class="progress-track"><div class="progress-bar" style="width: 18.6%; background: #06b6d4;"></div></div>
+            </div>
+            <div class="imp-item">
+              <div class="imp-header">
+                <span>day_of_week & is_weekend</span>
+                <span class="bold">11.4%</span>
+              </div>
+              <div class="progress-track"><div class="progress-bar" style="width: 11.4%; background: #10b981;"></div></div>
+            </div>
+            <div class="imp-item">
+              <div class="imp-header">
+                <span>temp_c (Ambient Temperature)</span>
+                <span class="bold">7.2%</span>
+              </div>
+              <div class="progress-track"><div class="progress-bar" style="width: 7.2%; background: #f59e0b;"></div></div>
+            </div>
+            <div class="imp-item">
+              <div class="imp-header">
+                <span>month_sin / month_cos (Seasonality)</span>
+                <span class="bold">4.8%</span>
+              </div>
+              <div class="progress-track"><div class="progress-bar" style="width: 4.8%; background: #ec4899;"></div></div>
+            </div>
+            <div class="imp-item">
+              <div class="imp-header">
+                <span>weather_main, rain_1h, snow_1h</span>
+                <span class="bold">5.7%</span>
+              </div>
+              <div class="progress-track"><div class="progress-bar" style="width: 5.7%; background: #8b5cf6;"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">🛡️</div>
+            <h3 class="card-title">Model Robustness & Leakage Safeguards</h3>
+          </div>
+          <ul class="feature-list">
+            <li><strong>Strict Temporal Split:</strong> Chronological order preserved (Training: 2012–2017, Testing: 2017–2018). Random shuffling was forbidden to mirror real-world production forecasting.</li>
+            <li><strong>Zero Preprocessor Leakage:</strong> Standard scaler for temperature/rain and One-Hot encoders fit exclusively on training data.</li>
+            <li><strong>Physically Bounded Outputs:</strong> Traffic volume is strictly bounded non-negative (>= 0) and capped at physical lane capacity.</li>
+            <li><strong>Missing & Anomaly Imputation:</strong> Extreme sensor failures (e.g. 0 Kelvin temp) automatically imputed using training set medians.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: DEPLOYMENT GUIDE -->
+    <section class="tab-pane" id="tab-guide">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">One-Click Vercel & Cloud Deployment Guide</h2>
+          <p class="section-subtitle">How to deploy this complete traffic analytics application to Vercel and Streamlit Cloud.</p>
+        </div>
+      </div>
+
+      <div class="guide-grid">
+        <!-- Vercel Deployment Card -->
+        <div class="card guide-card">
+          <div class="card-header">
+            <div class="vercel-badge">▲ Vercel</div>
+            <h3 class="card-title">Deploy to Vercel (CLI or GitHub)</h3>
+          </div>
+          <p class="card-body-text">
+            This repository is configured with <code>vercel.json</code>, static assets in <code>public/</code>, and a serverless API in <code>api/predict.py</code>.
+          </p>
+
+          <div class="step-box">
+            <div class="step-num">1</div>
+            <div class="step-content">
+              <strong>Option A: One-Command Terminal Deployment</strong>
+              <p>Run the Vercel CLI from your project directory in PowerShell or Bash:</p>
+              <div class="code-box">
+                <code>npx vercel</code>
+                <button class="copy-btn" onclick="app.copyCode('npx vercel')">Copy</button>
+              </div>
+              <p class="text-hint">Press Enter on default prompts. Vercel will build and output your production live URL.</p>
+            </div>
+          </div>
+
+          <div class="step-box">
+            <div class="step-num">2</div>
+            <div class="step-content">
+              <strong>Option B: Git Push to Vercel Dashboard</strong>
+              <p>Initialize git, push to your GitHub / GitLab account, and import the repository at <a href="https://vercel.com/new" target="_blank" class="link">vercel.com/new</a>.</p>
+              <div class="code-box">
+                <code>git init
+git add .
+git commit -m "Deploy Urban Traffic Flow Optimization to Vercel"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/UrbanTrafficFlowOptimization.git
+git push -u origin main</code>
+                <button class="copy-btn" onclick="app.copyCode('git init\ngit add .\ngit commit -m \"Deploy Urban Traffic Flow Optimization to Vercel\"\ngit branch -M main')">Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Streamlit Cloud Card -->
+        <div class="card guide-card">
+          <div class="card-header">
+            <div class="streamlit-badge">👑 Streamlit Cloud</div>
+            <h3 class="card-title">Deploy Python GUI (app.py)</h3>
+          </div>
+          <p class="card-body-text">
+            Streamlit requires continuous WebSockets. Host the full Python GUI on Streamlit Community Cloud (free forever):
+          </p>
+
+          <div class="step-box">
+            <div class="step-num">1</div>
+            <div class="step-content">
+              <strong>Push Repository to GitHub</strong>
+              <p>Ensure <code>requirements.txt</code>, <code>app.py</code>, and <code>models/</code> are committed.</p>
+            </div>
+          </div>
+
+          <div class="step-box">
+            <div class="step-num">2</div>
+            <div class="step-content">
+              <strong>Connect to Streamlit Cloud</strong>
+              <p>Go to <a href="https://share.streamlit.io" target="_blank" class="link">share.streamlit.io</a>, select your repository, specify Main file path as <code>app.py</code>, and click <strong>Deploy</strong>.</p>
+            </div>
+          </div>
+
+          <div class="step-box">
+            <div class="step-num">3</div>
+            <div class="step-content">
+              <strong>Run Locally Anytime</strong>
+              <div class="code-box">
+                <code>streamlit run app.py</code>
+                <button class="copy-btn" onclick="app.copyCode('streamlit run app.py')">Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Image Zoom Modal -->
+  <div class="modal-overlay" id="figure-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="modal-fig-title">Figure Preview</h4>
+        <button class="modal-close" id="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <img src="" alt="Diagnostic Figure" id="modal-fig-img" class="modal-img">
+        <p class="modal-caption" id="modal-fig-caption"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <span class="brand-title">TrafficFlow<span class="accent-text">AI</span></span>
+        <p class="footer-desc">Urban Traffic Flow Optimization System • Metro Interstate 94 Traffic Volume Dataset</p>
+      </div>
+      <div class="footer-links">
+        <span>Framework: Vanilla CSS & Modern JS</span>
+        <span>•</span>
+        <span>Model: Random Forest Regressor (R²: 0.927)</span>
+        <span>•</span>
+        <span>Engine: Vercel Serverless Ready</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

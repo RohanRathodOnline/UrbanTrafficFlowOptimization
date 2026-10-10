@@ -1,0 +1,60 @@
+========================================================================
+ URBAN TRAFFIC FLOW OPTIMIZATION - EXPLORATORY DATA ANALYSIS (EDA) SUMMARY
+========================================================================
+
+1. DATA CLEANING & DEDUPLICATION AUDIT
+   - Initial raw records       : 48,204
+   - Verified duplicate rows   : 17
+   - Cleaned dataset rows      : 48,187
+   - Remaining duplicates      : 0
+   - Valid zero-traffic counts : 2 before, 2 after (intact)
+   - Holiday records           : 61 holiday dates, 48,126 regular days
+
+2. TEMPORAL TRAFFIC PATTERNS
+   - Busiest clock hour        : 16:00 with mean 5,663.76 vehicles/hour
+   - Quietest clock hour       : 03:00 with mean 371.09 vehicles/hour
+   - Diurnal pattern           : Bimodal weekday commute with peaks at 07:00 (morning rush) and 16:00 (evening rush)
+   - Busiest day of week       : Friday with mean 3,655.33 vehicles/hour
+   - Quietest day of week      : Sunday with mean 2,369.09 vehicles/hour
+   - Weekday average volume    : 3,533.29 vehicles/hour
+   - Weekend average volume    : 2,570.70 vehicles/hour (drop of ~27.2% compared to weekdays)
+
+3. WEATHER & ENVIRONMENTAL OBSERVATIONS
+   - Primary Weather Breakdown (Mean Traffic Volume & Sample Size):
+     * Clouds        : 3,618.0 veh/h  (N=15,158, std=1,906.4)
+     * Haze          : 3,502.1 veh/h  (N=1,360, std=1,873.5)
+     * Rain          : 3,317.9 veh/h  (N=5,672, std=1,982.2)
+     * Drizzle       : 3,292.2 veh/h  (N=1,820, std=1,997.5)
+     * Smoke         : 3,237.7 veh/h  (N=   20, std=1,978.0)
+     * Clear         : 3,055.6 veh/h  (N=13,384, std=1,987.3)
+     * Snow          : 3,016.3 veh/h  (N=2,875, std=1,900.3)
+     * Thunderstorm  : 2,999.4 veh/h  (N=1,033, std=1,988.0)
+     * Mist          : 2,933.3 veh/h  (N=5,949, std=2,073.0)
+     * Fog           : 2,703.7 veh/h  (N=  912, std=2,125.5)
+     * Squall        : 2,061.8 veh/h  (N=    4, std=1,950.1)
+
+4. PEARSON CORRELATION WITH TRAFFIC VOLUME
+   - hour           : r = +0.3523
+   - temp_c         : r = +0.1302
+   - clouds_all     : r = +0.0671
+   - rain_1h        : r = +0.0047
+   - year           : r = +0.0047
+   - snow_1h        : r = +0.0007
+   - month          : r = -0.0025
+   - is_holiday     : r = -0.0429
+   - day_of_week    : r = -0.1496
+   - is_weekend     : r = -0.2185
+
+5. KEY FINDINGS & STATISTICAL LIMITATIONS
+   - Temporal dominance: Hour of day (r = +0.352) and weekend indicator (r = -0.219)
+     exert the strongest linear association with traffic volume.
+   - Non-linear relationships: Weather features show weak linear Pearson correlations
+     (rain r = +0.005, snow r = +0.001), indicating that precipitation effects are highly
+     localized or non-linear rather than uniform across all hours.
+   - Data collection gaps: The time series contains tracking discontinuities (e.g. between
+     mid-2014 and mid-2015) that should be respected during time-series modeling.
+   - Extreme outliers: 10 records recorded 0 Kelvin (-273.15 C) and 1 record recorded
+     9,831.3 mm/h of rain; both represent physical sensor recording artifacts.
+   - Observational nature: All metrics represent empirical historical associations and do
+     not constitute causal claims regarding driving behavior.
+========================================================================

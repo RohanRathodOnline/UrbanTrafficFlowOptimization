@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "name": "urban-traffic-flow-optimization",
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ]
+}
