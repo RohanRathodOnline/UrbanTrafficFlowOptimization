@@ -411,60 +411,22 @@ All documentation and submission materials have been verified and saved:
 
 ---
 
-## 13. Cloud & Vercel Deployment Architecture
+## 13. Cloud Deployment (Streamlit Community Cloud)
 
-The project provides dual production deployment capabilities: a high-performance **Vercel Serverless Web Application** and a **Streamlit Community Cloud** host for the Python GUI.
+The interactive Python GUI dashboard ([`app.py`](file:///r:/UrbanTrafficFlowOptimization/app.py) / [`streamlit_app.py`](file:///r:/UrbanTrafficFlowOptimization/streamlit_app.py)) can be hosted 24/7 on Streamlit Community Cloud:
 
-### Architecture Overview
-
-```
-UrbanTrafficFlowOptimization/
-├── api/
-│   ├── predict.py            # Vercel serverless Python inference handler (POST /api/predict)
-│   └── requirements.txt      # Minimal serverless dependencies (joblib, scikit-learn, etc.)
-├── public/                   # Vercel static web assets
-│   ├── index.html            # Semantic HTML5 dashboard (Overview, EDA, Live Predictor, Benchmarks)
-│   ├── style.css             # Vanilla CSS design system with sleek dark mode and glassmorphism
-│   ├── app.js                # Frontend controller with scenario presets and fallback regression
-│   └── figures/              # High-resolution publication diagnostic PNG figures (12 plots)
-├── app.py                    # Streamlit interactive Python analytics dashboard (local / Streamlit Cloud)
-├── vercel.json               # Vercel routing rules (/api/* rewrites and static configuration)
-└── models/
-    └── traffic_volume_rf_model.joblib  # Trained Random Forest Regressor pipeline (R² = 0.927)
-```
-
-### Option A: Deploy to Vercel (Recommended)
-
-1. **One-Command CLI Deployment:**
-   From the project directory, run:
+1. **Repository Setup:**
+   Ensure your code is pushed to GitHub:
    ```bash
-   npx vercel
-   ```
-   Follow the interactive prompts:
-   - *Set up and deploy?* `Y`
-   - *Which scope?* (Select your Vercel account)
-   - *Link to existing project?* `N`
-   - *What's your project's name?* `urban-traffic-flow-optimization`
-   - *In which directory is your code located?* `./`
-   - *Want to modify settings?* `N`
-
-   Vercel will build and assign an instant production URL (e.g. `https://urban-traffic-flow-optimization.vercel.app`).
-
-2. **Deploy via GitHub / GitLab:**
-   ```bash
-   git add .
-   git commit -m "Configure Vercel deployment with serverless API and public dashboard"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/UrbanTrafficFlowOptimization.git
    git push -u origin main
    ```
-   In the [Vercel Dashboard](https://vercel.com/new), select **Import Repository**, keep default root settings, and click **Deploy**.
 
-### Option B: Deploy Streamlit GUI to Streamlit Community Cloud
-
-Because Streamlit requires long-lived bidirectional WebSockets, the full Python interface in [`app.py`](file:///r:/UrbanTrafficFlowOptimization/app.py) can be hosted on Streamlit Community Cloud:
-1. Push your repository to GitHub.
-2. Sign in to [share.streamlit.io](https://share.streamlit.io).
-3. Click **New app**, select your repository, set the **Main file path** to `app.py`, and click **Deploy**.
+2. **Deploy to Streamlit Cloud:**
+   - Sign in to [share.streamlit.io](https://share.streamlit.io) with your GitHub account.
+   - Click **New app**.
+   - Select your repository: `RohanRathodOnline/UrbanTrafficFlowOptimization`.
+   - Set **Branch** to `main`.
+   - Set **Main file path** to `app.py` (or `streamlit_app.py`).
+   - Click **Deploy!**
 
 
