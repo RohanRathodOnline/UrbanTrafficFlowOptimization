@@ -46,7 +46,9 @@ UrbanTrafficFlowOptimization/
 ├── data/
 │   └── Metro_Interstate_Traffic_Volume.csv       # Primary raw dataset (48,204 rows)
 ├── models/
-│   └── traffic_volume_rf_model.joblib            # Production Random Forest pipeline & metadata
+│   └── traffic_model.pth                         # Production PyTorch Deep Learning Model (.pth)
+├── notebooks/
+│   └── Urban_Traffic_Flow_Optimization.ipynb     # Pre-executed Jupyter Notebook with all outputs
 ├── outputs/
 │   ├── figures/                                  # Publication-quality diagnostic figures
 │   │   ├── actual_vs_predicted.png               # Regression model test set fit comparison
@@ -73,18 +75,17 @@ UrbanTrafficFlowOptimization/
 │   └── yearly_traffic_summary.csv                 # Annual traffic volume statistics
 ├── reports/
 │   ├── final_project_report.md                   # Comprehensive academic capstone report
-│   ├── final_verification_report.md              # End-to-end QA reliability audit report
 │   └── project_demo_guide.md                     # Step-by-step viva & live evaluation demo guide
 ├── src/
 │   ├── __init__.py                               # Package initialization
 │   ├── data_loader.py                            # Dataset loading, path resolution & schema validation
 │   ├── eda.py                                    # Data cleaning, feature extraction, analysis & plotting
 │   ├── inspector.py                              # Data inspection and descriptive statistics
-│   └── model.py                                  # Regression modeling, evaluation, plotting & inference
+│   └── model.py                                  # PyTorch NN & Regression modeling, evaluation & inference
 ├── .gitignore                                    # Excludes virtual environments, caches, OS files
 ├── app.py                                        # Interactive Streamlit Web GUI Dashboard
 ├── main.py                                       # Unified CLI entry point (--eda, --train, --predict)
-├── requirements.txt                              # Verified project dependencies
+├── requirements.txt                              # Verified project dependencies (includes torch)
 └── README.md                                     # Project documentation
 ```
 

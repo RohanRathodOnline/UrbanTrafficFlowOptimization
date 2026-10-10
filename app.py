@@ -225,13 +225,11 @@ def load_dataset() -> Optional[pd.DataFrame]:
 
 @st.cache_resource(show_spinner=False)
 def load_model() -> Optional[Dict[str, Any]]:
-    """Load serialized model package (PyTorch .pth preferred, fallback to .joblib)."""
+    """Load serialized PyTorch model package (.pth)."""
     pth_path = PROJECT_ROOT / "models" / "traffic_model.pth"
-    rf_path = PROJECT_ROOT / "models" / "traffic_volume_rf_model.joblib"
-    target_path = pth_path if pth_path.exists() else rf_path
-    if target_path.exists():
+    if pth_path.exists():
         try:
-            return load_trained_model(target_path)
+            return load_trained_model(pth_path)
         except Exception:
             return None
     return None
@@ -578,11 +576,10 @@ elif selected_page == "Traffic Prediction":
 
     model_package = load_model()
     if model_package is None:
-        st.error("Model package not found at 'models/traffic_model.pth' or 'models/traffic_volume_rf_model.joblib'. Please run 'python main.py --train' to generate the model artifact.")
+        st.error("Model package not found at 'models/traffic_model.pth'. Please run 'python main.py --train' to generate the model artifact.")
         st.stop()
 
-    is_torch = model_package.get("is_pytorch", False)
-    active_engine_name = "PyTorch Deep Learning Neural Network (traffic_model.pth)" if is_torch else "Random Forest Regressor (traffic_volume_rf_model.joblib)"
+    active_engine_name = "PyTorch Deep Learning Neural Network (traffic_model.pth)"
     st.caption(f"🤖 **Active Model Engine**: `{active_engine_name}`")
 
     # Compact optional scenario selector

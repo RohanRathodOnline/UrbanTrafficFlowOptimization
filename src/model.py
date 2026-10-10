@@ -30,22 +30,23 @@ plt.rcParams["axes.edgecolor"] = "#cccccc"
 plt.rcParams["axes.linewidth"] = 0.8
 
 NUMERIC_FEATURES = [
-    "hour",
-    "hour_sin",
-    "hour_cos",
-    "day_of_week",
-    "day_sin",
-    "day_cos",
-    "month",
-    "month_sin",
-    "month_cos",
-    "year",
-    "is_weekend",
-    "is_holiday",
     "temp_c",
     "rain_1h",
     "snow_1h",
     "clouds_all",
+    "hour",
+    "day_of_week",
+    "month",
+    "year",
+    "is_weekend",
+    "is_rush_hour",
+    "is_holiday",
+    "hour_sin",
+    "hour_cos",
+    "day_sin",
+    "day_cos",
+    "month_sin",
+    "month_cos",
 ]
 
 CATEGORICAL_FEATURES = ["weather_main"]
@@ -91,8 +92,11 @@ def prepare_model_features(df_clean: pd.DataFrame) -> pd.DataFrame:
     df_feat["hour_cos"] = np.cos(2 * np.pi * df_feat["hour"] / 24.0)
     df_feat["day_sin"] = np.sin(2 * np.pi * df_feat["day_of_week"] / 7.0)
     df_feat["day_cos"] = np.cos(2 * np.pi * df_feat["day_of_week"] / 7.0)
-    df_feat["month_sin"] = np.sin(2 * np.pi * df_feat["month"] / 12.0)
-    df_feat["month_cos"] = np.cos(2 * np.pi * df_feat["month"] / 12.0)
+    df_feat["month_sin"] = np.sin(2 * np.pi * (df_feat["month"] - 1) / 12.0)
+    df_feat["month_cos"] = np.cos(2 * np.pi * (df_feat["month"] - 1) / 12.0)
+    df_feat["is_rush_hour"] = df_feat["hour"].isin([7, 8, 9, 16, 17, 18]).astype(int)
+    df_feat["is_weekend"] = (df_feat["day_of_week"] >= 5).astype(int)
+    df_feat["is_holiday"] = (df_feat["holiday"] != "None").astype(int)
 
     return df_feat
 
@@ -579,33 +583,35 @@ def predict_traffic_volume(
     weather_main = str(input_data.get("weather_main", "Clear"))
     is_holiday = int(bool(input_data.get("is_holiday", 0)))
     is_weekend = int(day_of_week in [5, 6])
+    is_rush_hour = int(hour in [7, 8, 9, 16, 17, 18])
 
     # 4. Compute cyclical features
     hour_sin = np.sin(2 * np.pi * hour / 24.0)
     hour_cos = np.cos(2 * np.pi * hour / 24.0)
     day_sin = np.sin(2 * np.pi * day_of_week / 7.0)
     day_cos = np.cos(2 * np.pi * day_of_week / 7.0)
-    month_sin = np.sin(2 * np.pi * month / 12.0)
-    month_cos = np.cos(2 * np.pi * month / 12.0)
+    month_sin = np.sin(2 * np.pi * (month - 1) / 12.0)
+    month_cos = np.cos(2 * np.pi * (month - 1) / 12.0)
 
     # 5. Assemble input row matching model feature schema
     feature_row = pd.DataFrame([{
-        "hour": hour,
-        "hour_sin": hour_sin,
-        "hour_cos": hour_cos,
-        "day_of_week": day_of_week,
-        "day_sin": day_sin,
-        "day_cos": day_cos,
-        "month": month,
-        "month_sin": month_sin,
-        "month_cos": month_cos,
-        "year": year,
-        "is_weekend": is_weekend,
-        "is_holiday": is_holiday,
         "temp_c": temp_c,
         "rain_1h": rain_1h,
         "snow_1h": snow_1h,
         "clouds_all": clouds_all,
+        "hour": hour,
+        "day_of_week": day_of_week,
+        "month": month,
+        "year": year,
+        "is_weekend": is_weekend,
+        "is_rush_hour": is_rush_hour,
+        "is_holiday": is_holiday,
+        "hour_sin": hour_sin,
+        "hour_cos": hour_cos,
+        "day_sin": day_sin,
+        "day_cos": day_cos,
+        "month_sin": month_sin,
+        "month_cos": month_cos,
         "weather_main": weather_main,
     }])
 
@@ -710,20 +716,6 @@ def run_training_pipeline(
     }
     save_pytorch_model(pytorch_bundle, pth_save_path)
 
-    # 7. Also save Random Forest pipeline (.joblib)
-    rf_save_path = models_dir / "traffic_volume_rf_model.joblib"
-    selected_pipeline = results["pipelines"]["Random Forest"]
-    rf_metadata = {
-        "model_type": "RandomForestRegressor",
-        "train_samples": len(split_data["X_train"]),
-        "test_samples": len(split_data["X_test"]),
-        "train_date_range": [str(d) for d in split_data["train_date_range"]],
-        "test_date_range": [str(d) for d in split_data["test_date_range"]],
-        "cleaning_params": split_data["cleaning_params"],
-        "metrics": results["metrics_df"].to_dict(orient="records"),
-    }
-    save_trained_model(selected_pipeline, rf_metadata, rf_save_path)
-
     return {
         "results": results,
         "split_data": split_data,
@@ -731,5 +723,4 @@ def run_training_pipeline(
         "fig_paths": fig_paths,
         "pth_save_path": pth_save_path,
         "model_save_path": pth_save_path,
-        "rf_save_path": rf_save_path,
     }

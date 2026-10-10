@@ -174,11 +174,9 @@ def main():
     if args.predict is not None:
         from src.model import predict_traffic_volume
 
-        pth_path = models_dir / "traffic_model.pth"
-        rf_path = models_dir / "traffic_volume_rf_model.joblib"
-        model_path = pth_path if pth_path.exists() else rf_path
+        model_path = models_dir / "traffic_model.pth"
         if not model_path.exists():
-            print(f"\n[ERROR] Model file not found at '{pth_path}' or '{rf_path}'. Please run with --train first.", file=sys.stderr)
+            print(f"\n[ERROR] Model file not found at '{model_path}'. Please run with --train first.", file=sys.stderr)
             return 1
 
         print("\n" + "=" * 70)
